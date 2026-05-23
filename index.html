@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#c9a84c"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="GoalPath"/>
+<meta name="description" content="Твой личный трекер целей"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"/>
+<title>GoalPath</title>
+<style>
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e8c96a;
+  --gold-dim: rgba(201,168,76,0.15);
+  --gold-border: rgba(201,168,76,0.25);
+  --bg: #080810;
+  --bg2: #0e0e1a;
+  --bg3: #13131f;
+  --bg4: #1a1a28;
+  --text: #f0ead8;
+  --text-dim: rgba(240,234,216,0.5);
+  --text-muted: rgba(240,234,216,0.25);
+  --red: #c94c4c;
+  --green: #4cc98a;
+  --blue: #4c8ac9;
+  --radius: 18px;
+  --radius-sm: 10px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: 'Jost', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── NOISE TEXTURE ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.4;
+}
+
+/* ── GLOW BG ── */
+.glow-orb {
+  position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+  filter: blur(80px);
+}
+.glow-orb.g1 { width: 300px; height: 300px; top: -100px; right: -80px; background: rgba(201,168,76,0.08); }
+.glow-orb.g2 { width: 200px; height: 200px; bottom: 100px; left: -60px; background: rgba(76,140,201,0.06); }
+
+/* ── APP SHELL ── */
+#app {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  padding-top: var(--safe-top);
+}
+
+/* ── HEADER ── */
+header {
+  flex-shrink: 0;
+  padding: 18px 24px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--gold-border);
+  background: rgba(8,8,16,0.85);
+  backdrop-filter: blur(20px);
+  position: relative; z-index: 10;
+}
+.logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 600; letter-spacing: 0.05em;
+  color: var(--gold);
+  display: flex; align-items: center; gap: 8px;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  border: 1.5px solid var(--gold); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.header-stats {
+  font-size: 11px; color: var(--text-dim); letter-spacing: 0.08em;
+  text-align: right; line-height: 1.5;
+}
+.header-stats span { color: var(--gold); font-weight: 500; }
+
+/* ── SCREENS ── */
+.screen {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 0 0 calc(80px + var(--safe-bottom));
+  position: relative; z-index: 1;
+  -webkit-overflow-scrolling: touch;
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── BOTTOM NAV ── */
+nav {
+  flex-shrink: 0;
+  display: flex;
+  padding: 0 8px calc(10px + var(--safe-bottom)) 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gold-border);
+  background: rgba(8,8,16,0.9);
+  backdrop-filter: blur(20px);
+  position: relative; z-index: 10;
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-dim); padding: 6px 4px;
+  transition: color 0.2s; font-family: 'Jost', sans-serif;
+  font-size: 10px; letter-spacing: 0.06em; font-weight: 400;
+}
+.nav-btn.active { color: var(--gold); }
+.nav-icon { font-size: 20px; line-height: 1; }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  padding: 24px 24px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px; font-weight: 300; color: var(--text);
+  letter-spacing: 0.02em;
+}
+.section-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: 0.05em; }
+
+/* ── ADD BUTTON ── */
+.btn-add {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--gold-dim); border: 1px solid var(--gold-border);
+  color: var(--gold); font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.btn-add:active { transform: scale(0.92); background: rgba(201,168,76,0.25); }
+
+/* ── GOAL CARD ── */
+.goals-list { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+
+.goal-card {
+  background: var(--bg3);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius);
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.25s;
+  position: relative; overflow: hidden;
+  animation: fadeIn 0.3s ease;
+}
+.goal-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.4;
+}
+.goal-card:active { transform: scale(0.98); border-color: rgba(201,168,76,0.45); }
+.goal-card.done { opacity: 0.55; }
+
+.goal-top { display: flex; align-items: flex-start; gap: 12px; }
+.goal-emoji {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: var(--bg4); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; border: 1px solid var(--gold-border);
+}
+.goal-info { flex: 1; min-width: 0; }
+.goal-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.goal-desc {
+  font-size: 12px; color: var(--text-dim); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+}
+.goal-badge {
+  flex-shrink: 0; padding: 3px 9px; border-radius: 20px;
+  font-size: 10px; letter-spacing: 0.07em; font-weight: 500;
+}
+.badge-active { background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+.badge-done { background: rgba(76,201,138,0.12); color: var(--green); border: 1px solid rgba(76,201,138,0.3); }
+
+.goal-progress-row { margin-top: 14px; }
+.progress-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.progress-label { font-size: 11px; color: var(--text-dim); letter-spacing: 0.05em; }
+.progress-pct { font-size: 11px; color: var(--gold); font-weight: 500; }
+
+.progress-track {
+  height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+.goal-footer { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.goal-meta { font-size: 10px; color: var(--text-muted); letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px; }
+
+/* ── EMPTY STATE ── */
+.empty {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 60px 32px; text-align: center; gap: 16px;
+}
+.empty-icon { font-size: 56px; opacity: 0.3; }
+.empty-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--text-dim); font-weight: 300; }
+.empty-sub { font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 240px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  width: 100%; max-height: 92vh;
+  background: var(--bg2);
+  border-top: 1px solid var(--gold-border);
+  border-radius: 28px 28px 0 0;
+  padding: 12px 24px calc(32px + var(--safe-bottom));
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal::-webkit-scrollbar { display: none; }
+
+.modal-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--gold-border); margin: 0 auto 20px;
+}
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px; font-weight: 600; margin-bottom: 20px;
+  color: var(--text);
+}
+
+/* ── FORM ── */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  font-size: 11px; letter-spacing: 0.1em; color: var(--gold);
+  margin-bottom: 8px; display: block; font-weight: 500;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%; background: var(--bg3);
+  border: 1px solid var(--gold-border); border-radius: var(--radius-sm);
+  color: var(--text); padding: 12px 14px;
+  font-family: 'Jost', sans-serif; font-size: 14px;
+  outline: none; transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--gold);
+}
+.form-textarea { resize: none; min-height: 80px; line-height: 1.5; }
+.form-select option { background: var(--bg3); }
+
+.emoji-picker {
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px;
+}
+.emoji-opt {
+  aspect-ratio: 1; border-radius: 8px;
+  background: var(--bg3); border: 1px solid transparent;
+  font-size: 20px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.emoji-opt:active, .emoji-opt.selected {
+  border-color: var(--gold); background: var(--gold-dim);
+}
+
+/* ── BUTTONS ── */
+.btn-primary {
+  width: 100%; padding: 16px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border: none; border-radius: var(--radius-sm);
+  color: #0a0a0f; font-family: 'Jost', sans-serif;
+  font-size: 15px; font-weight: 500; letter-spacing: 0.06em;
+  cursor: pointer; transition: all 0.2s; margin-top: 8px;
+}
+.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+.btn-ghost {
+  width: 100%; padding: 13px;
+  background: transparent; border: 1px solid var(--gold-border);
+  border-radius: var(--radius-sm); color: var(--text-dim);
+  font-family: 'Jost', sans-serif; font-size: 14px;
+  cursor: pointer; transition: all 0.2s; margin-top: 8px;
+}
+.btn-ghost:active { border-color: var(--gold); color: var(--gold); }
+
+/* ── GOAL DETAIL ── */
+#screenDetail { display: none; }
+#screenDetail.visible { display: flex; flex-direction: column; }
+
+.detail-header {
+  flex-shrink: 0; padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--gold-border);
+  position: relative; z-index: 5;
+}
+.back-btn {
+  background: none; border: none; color: var(--gold);
+  font-family: 'Jost', sans-serif; font-size: 14px;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  padding: 0; margin-bottom: 16px;
+}
+.detail-top { display: flex; align-items: center; gap: 14px; }
+.detail-emoji {
+  width: 56px; height: 56px;
+  background: var(--bg4); border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; border: 1px solid var(--gold-border);
+  flex-shrink: 0;
+}
+.detail-info { flex: 1; min-width: 0; }
+.detail-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 600;
+}
+.detail-desc { font-size: 13px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+
+.ring-container {
+  display: flex; justify-content: center; padding: 24px 24px 16px;
+}
+.ring-wrap { position: relative; width: 120px; height: 120px; }
+.ring-svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: var(--bg4); stroke-width: 8; }
+.ring-fg {
+  fill: none; stroke: url(#goldGrad); stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 314;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.ring-text {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ring-pct {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px; font-weight: 600; color: var(--gold); line-height: 1;
+}
+.ring-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.08em; margin-top: 3px; }
+
+/* ── STEPS ── */
+.steps-section { padding: 0 16px 16px; }
+.steps-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 0 12px;
+}
+.steps-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px; color: var(--text-dim); font-weight: 300;
+  letter-spacing: 0.03em;
+}
+
+.step-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px;
+  background: var(--bg3); border-radius: var(--radius-sm);
+  border: 1px solid var(--gold-border); margin-bottom: 8px;
+  transition: all 0.2s; animation: fadeIn 0.25s ease;
+  cursor: pointer; position: relative;
+}
+.step-item.completed {
+  border-color: rgba(76,201,138,0.2);
+  background: rgba(76,201,138,0.04);
+}
+.step-check {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid var(--gold-border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.2s;
+  background: transparent;
+}
+.step-item.completed .step-check {
+  background: var(--green); border-color: var(--green);
+  color: #0a0a0f; font-size: 13px;
+}
+.step-body { flex: 1; min-width: 0; }
+.step-name {
+  font-size: 14px; color: var(--text); font-weight: 400; line-height: 1.4;
+}
+.step-item.completed .step-name {
+  text-decoration: line-through; color: var(--text-dim);
+}
+.step-note { font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+.step-priority {
+  flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; margin-top: 9px;
+}
+.prio-high { background: var(--red); }
+.prio-mid { background: var(--gold); }
+.prio-low { background: var(--text-muted); }
+
+.step-delete {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 16px; cursor: pointer; padding: 2px 6px;
+  border-radius: 6px; opacity: 0;
+  transition: opacity 0.2s;
+}
+.step-item:hover .step-delete { opacity: 1; }
+
+/* ── DANGER ZONE ── */
+.danger-zone { padding: 16px 24px 0; }
+.btn-danger {
+  width: 100%; padding: 13px;
+  background: transparent; border: 1px solid rgba(201,76,76,0.3);
+  border-radius: var(--radius-sm); color: #c94c4c;
+  font-family: 'Jost', sans-serif; font-size: 13px;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.04em;
+}
+.btn-danger:active { background: rgba(201,76,76,0.1); }
+
+/* ── DASHBOARD ── */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+.stat-card {
+  background: var(--bg3); border: 1px solid var(--gold-border);
+  border-radius: var(--radius); padding: 18px 16px;
+  position: relative; overflow: hidden;
+}
+.stat-card::after {
+  content: '';
+  position: absolute; bottom: 0; right: 0;
+  width: 50px; height: 50px;
+  background: radial-gradient(circle, var(--gold-dim) 0%, transparent 70%);
+}
+.stat-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px; font-weight: 600; color: var(--gold); line-height: 1;
+}
+.stat-label { font-size: 11px; color: var(--text-dim); margin-top: 6px; letter-spacing: 0.06em; }
+
+.inspiration-card {
+  margin: 0 16px 16px;
+  background: var(--bg3); border: 1px solid var(--gold-border);
+  border-radius: var(--radius); padding: 20px;
+  position: relative; overflow: hidden;
+}
+.inspiration-card::before {
+  content: '❝';
+  position: absolute; top: 12px; left: 16px;
+  font-size: 48px; color: var(--gold); opacity: 0.1;
+  font-family: serif; line-height: 1;
+}
+.inspiration-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px; font-style: italic; color: var(--text);
+  line-height: 1.6; padding-left: 8px;
+}
+.inspiration-author { font-size: 11px; color: var(--gold); margin-top: 10px; letter-spacing: 0.08em; padding-left: 8px; }
+
+.active-goals-mini { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.mini-goal {
+  background: var(--bg3); border: 1px solid var(--gold-border);
+  border-radius: var(--radius-sm); padding: 14px;
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer; transition: all 0.2s;
+}
+.mini-goal:active { transform: scale(0.98); }
+.mini-emoji { font-size: 18px; }
+.mini-info { flex: 1; min-width: 0; }
+.mini-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-prog { font-size: 11px; color: var(--gold); margin-top: 3px; }
+.mini-bar { height: 2px; background: var(--bg4); border-radius: 1px; margin-top: 6px; overflow: hidden; }
+.mini-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 1px; transition: width 0.4s; }
+
+/* ── INSTALL BANNER ── */
+.install-banner {
+  margin: 0 16px 12px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.05));
+  border: 1px solid var(--gold-border); border-radius: var(--radius);
+  padding: 16px;
+  display: flex; align-items: center; gap: 14px;
+}
+.install-icon { font-size: 28px; flex-shrink: 0; }
+.install-text { flex: 1; min-width: 0; }
+.install-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.install-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+.btn-install {
+  flex-shrink: 0; padding: 8px 14px;
+  background: var(--gold); border: none; border-radius: 8px;
+  color: #0a0a0f; font-family: 'Jost', sans-serif;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.install-close {
+  flex-shrink: 0; background: none; border: none;
+  color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0;
+}
+
+/* ── ANIM ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--gold-border); margin: 0 24px 16px; opacity: 0.5; }
+
+/* ── PRIORITY ROW ── */
+.priority-row { display: flex; gap: 8px; }
+.priority-btn {
+  flex: 1; padding: 10px;
+  background: var(--bg3); border: 1px solid var(--gold-border);
+  border-radius: var(--radius-sm); color: var(--text-dim);
+  font-family: 'Jost', sans-serif; font-size: 12px;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.priority-btn.sel-high { border-color: var(--red); color: var(--red); background: rgba(201,76,76,0.08); }
+.priority-btn.sel-mid { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+.priority-btn.sel-low { border-color: var(--text-muted); color: var(--text-dim); background: rgba(240,234,216,0.04); }
+
+.no-steps {
+  text-align: center; padding: 24px 16px;
+  color: var(--text-muted); font-size: 13px; line-height: 1.6;
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div class="glow-orb g1"></div>
+<div class="glow-orb g2"></div>
+
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">◈</div>
+      GoalPath
+    </div>
+    <div class="header-stats" id="headerStats">
+      <span id="hActive">0</span> активных<br>
+      <span id="hDone">0</span> завершённых
+    </div>
+  </header>
+
+  <!-- ═══ SCREEN: GOALS ═══ -->
+  <div class="screen" id="screenGoals">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Мои цели</div>
+        <div class="section-sub" id="goalsSubtitle">Начни первую цель</div>
+      </div>
+      <button class="btn-add" onclick="openGoalModal()">+</button>
+    </div>
+    <div class="goals-list" id="goalsList"></div>
+  </div>
+
+  <!-- ═══ SCREEN: DASHBOARD ═══ -->
+  <div class="screen" id="screenDash" style="display:none">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Обзор</div>
+        <div class="section-sub">Твой прогресс</div>
+      </div>
+    </div>
+    <div id="installBannerWrap"></div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="inspiration-card" id="inspirationCard"></div>
+    <div class="divider" style="margin: 16px 16px;"></div>
+    <div class="section-header" style="padding-top:0">
+      <div class="section-title" style="font-size:20px">Активные цели</div>
+    </div>
+    <div class="active-goals-mini" id="activeGoalsMini"></div>
+  </div>
+
+  <!-- ═══ SCREEN: DETAIL ═══ -->
+  <div class="screen" id="screenDetail">
+    <div class="detail-header">
+      <button class="back-btn" onclick="goBack()">← Все цели</button>
+      <div class="detail-top">
+        <div class="detail-emoji" id="detailEmoji">🎯</div>
+        <div class="detail-info">
+          <div class="detail-name" id="detailName"></div>
+          <div class="detail-desc" id="detailDesc"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ring-container">
+      <div class="ring-wrap">
+        <svg class="ring-svg" viewBox="0 0 120 120">
+          <defs>
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#c9a84c"/>
+              <stop offset="100%" stop-color="#e8c96a"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="60" cy="60" r="50"/>
+          <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="50" stroke-dashoffset="314"/>
+        </svg>
+        <div class="ring-text">
+          <div class="ring-pct" id="ringPct">0%</div>
+          <div class="ring-label">ПРОГРЕСС</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="steps-section">
+      <div class="steps-header">
+        <div class="steps-title">Шаги к цели</div>
+        <button class="btn-add" onclick="openStepModal()">+</button>
+      </div>
+      <div id="stepsList"></div>
+    </div>
+
+    <div class="danger-zone">
+      <button class="btn-danger" onclick="deleteCurrentGoal()">🗑 Удалить цель</button>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+
+  <nav>
+    <button class="nav-btn active" id="navGoals" onclick="showScreen('goals')">
+      <div class="nav-icon">◈</div>
+      Цели
+    </button>
+    <button class="nav-btn" id="navDash" onclick="showScreen('dash')">
+      <div class="nav-icon">◎</div>
+      Обзор
+    </button>
+  </nav>
+</div>
+
+<!-- ═══ MODAL: NEW GOAL ═══ -->
+<div class="modal-overlay" id="goalModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="goalModalTitle">Новая цель</div>
+
+    <div class="form-group">
+      <label class="form-label">ИКОНКА</label>
+      <div class="emoji-picker" id="emojiPicker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">НАЗВАНИЕ ЦЕЛИ</label>
+      <input type="text" class="form-input" id="goalNameInput" placeholder="Чего ты хочешь достичь?"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ОПИСАНИЕ (необязательно)</label>
+      <textarea class="form-textarea" id="goalDescInput" placeholder="Зачем это важно для тебя..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ДЕДЛАЙН (необязательно)</label>
+      <input type="date" class="form-input" id="goalDateInput"/>
+    </div>
+
+    <button class="btn-primary" onclick="saveGoal()">Сохранить цель</button>
+    <button class="btn-ghost" onclick="closeModal('goalModal')">Отмена</button>
+  </div>
+</div>
+
+<!-- ═══ MODAL: NEW STEP ═══ -->
+<div class="modal-overlay" id="stepModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Новый шаг</div>
+
+    <div class="form-group">
+      <label class="form-label">ШАГ</label>
+      <input type="text" class="form-input" id="stepNameInput" placeholder="Что нужно сделать?"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ЗАМЕТКА (необязательно)</label>
+      <textarea class="form-textarea" id="stepNoteInput" placeholder="Детали, ресурсы, ссылки..." style="min-height:60px"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ПРИОРИТЕТ</label>
+      <div class="priority-row">
+        <button class="priority-btn" id="prioHigh" onclick="setPriority('high')">🔴 Высокий</button>
+        <button class="priority-btn" id="prioMid" onclick="setPriority('mid')">🟡 Средний</button>
+        <button class="priority-btn" id="prioLow" onclick="setPriority('low')">⚪ Низкий</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="saveStep()">Добавить шаг</button>
+    <button class="btn-ghost" onclick="closeModal('stepModal')">Отмена</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════
+const EMOJIS = ['🎯','🚀','💡','📚','💪','🏆','❤️','🌟','💰','🏠','✈️','🎨','🎵','🧘','🌱','🔥','⚡','🌊','🎓','💼','🧠','🛠️','🌍','🎭','🎮','🏋️','🤝','🦋','🌸','⭐'];
+
+const QUOTES = [
+  { text: "Путь в тысячу ли начинается с первого шага.", author: "Лао-цзы" },
+  { text: "Не важно, как медленно ты идёшь, главное — не останавливаться.", author: "Конфуций" },
+  { text: "Успех — это сумма маленьких усилий, повторяемых день за днём.", author: "Роберт Коллиер" },
+  { text: "Мечты не сбываются сами. Их воплощают люди.", author: "Брайан Трейси" },
+  { text: "Разница между мечтой и целью — это дата.", author: "Мел Роббинс" },
+  { text: "Действие — фундаментальный ключ к успеху.", author: "Пабло Пикассо" },
+  { text: "Нет ничего невозможного. Само слово говорит: «Я возможно!»", author: "Одри Хепберн" },
+  { text: "Великие дела совершаются не силой, а упорством.", author: "Сэмюэл Джонсон" },
+];
+
+let goals = JSON.parse(localStorage.getItem('gp_goals') || '[]');
+let currentGoalId = null;
+let selectedEmoji = '🎯';
+let selectedPriority = 'mid';
+let editingGoalId = null;
+let deferredInstall = null;
+
+function save() {
+  localStorage.setItem('gp_goals', JSON.stringify(goals));
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+// ══════════════════════════════════════════
+//  SCREENS
+// ══════════════════════════════════════════
+function showScreen(name) {
+  document.getElementById('screenGoals').style.display = name === 'goals' ? 'block' : 'none';
+  document.getElementById('screenDash').style.display = name === 'dash' ? 'block' : 'none';
+  document.getElementById('screenDetail').style.display = name === 'detail' ? 'flex' : 'none';
+  document.getElementById('screenDetail').style.flexDirection = 'column';
+
+  document.getElementById('navGoals').classList.toggle('active', name === 'goals' || name === 'detail');
+  document.getElementById('navDash').classList.toggle('active', name === 'dash');
+
+  if (name === 'goals') renderGoals();
+  if (name === 'dash') renderDash();
+  if (name === 'detail') renderDetail();
+  updateHeader();
+}
+
+function goBack() {
+  currentGoalId = null;
+  showScreen('goals');
+}
+
+// ══════════════════════════════════════════
+//  HEADER
+// ══════════════════════════════════════════
+function updateHeader() {
+  const active = goals.filter(g => !g.done).length;
+  const done = goals.filter(g => g.done).length;
+  document.getElementById('hActive').textContent = active;
+  document.getElementById('hDone').textContent = done;
+}
+
+// ══════════════════════════════════════════
+//  GOALS SCREEN
+// ══════════════════════════════════════════
+function renderGoals() {
+  const list = document.getElementById('goalsList');
+  const sub = document.getElementById('goalsSubtitle');
+  list.innerHTML = '';
+
+  if (!goals.length) {
+    list.innerHTML = `<div class="empty">
+      <div class="empty-icon">◈</div>
+      <div class="empty-title">Пока нет целей</div>
+      <div class="empty-sub">Нажми + чтобы создать первую цель и начать свой путь</div>
+    </div>`;
+    sub.textContent = 'Начни первую цель';
+    return;
+  }
+
+  sub.textContent = `${goals.length} ${plural(goals.length, 'цель', 'цели', 'целей')}`;
+
+  goals.sort((a,b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+
+  goals.forEach(g => {
+    const pct = calcPct(g);
+    const card = document.createElement('div');
+    card.className = 'goal-card' + (g.done ? ' done' : '');
+    card.innerHTML = `
+      <div class="goal-top">
+        <div class="goal-emoji">${g.emoji}</div>
+        <div class="goal-info">
+          <div class="goal-name">${esc(g.name)}</div>
+          <div class="goal-desc">${esc(g.desc || 'Нажми чтобы открыть')}</div>
+        </div>
+        <div class="goal-badge ${g.done ? 'badge-done' : 'badge-active'}">${g.done ? 'ГОТОВО' : 'АКТИВНА'}</div>
+      </div>
+      <div class="goal-progress-row">
+        <div class="progress-info">
+          <span class="progress-label">${(g.steps||[]).length} ${plural((g.steps||[]).length,'шаг','шага','шагов')}</span>
+          <span class="progress-pct">${pct}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="goal-footer">
+        ${g.deadline ? `<div class="goal-meta">📅 ${formatDate(g.deadline)}</div>` : ''}
+        ${(g.steps||[]).filter(s=>s.done).length > 0 ? `<div class="goal-meta">✅ ${(g.steps||[]).filter(s=>s.done).length} выполнено</div>` : ''}
+      </div>
+    `;
+    card.onclick = () => openGoalDetail(g.id);
+    list.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════
+//  GOAL DETAIL
+// ══════════════════════════════════════════
+function openGoalDetail(id) {
+  currentGoalId = id;
+  showScreen('detail');
+}
+
+function renderDetail() {
+  const g = goals.find(x => x.id === currentGoalId);
+  if (!g) return;
+
+  document.getElementById('detailEmoji').textContent = g.emoji;
+  document.getElementById('detailName').textContent = g.name;
+  document.getElementById('detailDesc').textContent = g.desc || '';
+
+  const pct = calcPct(g);
+  document.getElementById('ringPct').textContent = pct + '%';
+  const offset = 314 - (314 * pct / 100);
+  setTimeout(() => document.getElementById('ringFg').style.strokeDashoffset = offset, 50);
+
+  renderSteps(g);
+}
+
+function renderSteps(g) {
+  const list = document.getElementById('stepsList');
+  list.innerHTML = '';
+
+  if (!g.steps || !g.steps.length) {
+    list.innerHTML = '<div class="no-steps">Добавь первый шаг<br>на пути к цели</div>';
+    return;
+  }
+
+  g.steps.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'step-item' + (s.done ? ' completed' : '');
+    el.innerHTML = `
+      <div class="step-priority prio-${s.priority || 'low'}"></div>
+      <div class="step-check">${s.done ? '✓' : ''}</div>
+      <div class="step-body">
+        <div class="step-name">${esc(s.name)}</div>
+        ${s.note ? `<div class="step-note">${esc(s.note)}</div>` : ''}
+      </div>
+      <button class="step-delete" onclick="deleteStep(event,${i})">×</button>
+    `;
+    el.onclick = (e) => { if (!e.target.classList.contains('step-delete')) toggleStep(i); };
+    list.appendChild(el);
+  });
+}
+
+function toggleStep(idx) {
+  const g = goals.find(x => x.id === currentGoalId);
+  if (!g) return;
+  g.steps[idx].done = !g.steps[idx].done;
+  const allDone = g.steps.length > 0 && g.steps.every(s => s.done);
+  g.done = allDone;
+  save();
+  renderDetail();
+}
+
+function deleteStep(e, idx) {
+  e.stopPropagation();
+  const g = goals.find(x => x.id === currentGoalId);
+  if (!g) return;
+  if (confirm('Удалить шаг?')) {
+    g.steps.splice(idx, 1);
+    g.done = g.steps.length > 0 && g.steps.every(s => s.done);
+    save();
+    renderDetail();
+  }
+}
+
+function deleteCurrentGoal() {
+  if (confirm('Удалить цель и все её шаги?')) {
+    goals = goals.filter(g => g.id !== currentGoalId);
+    save();
+    goBack();
+  }
+}
+
+// ══════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════
+function renderDash() {
+  // Install banner
+  const bannerWrap = document.getElementById('installBannerWrap');
+  bannerWrap.innerHTML = '';
+  if (deferredInstall && !localStorage.getItem('gp_install_hidden')) {
+    bannerWrap.innerHTML = `
+      <div class="install-banner">
+        <div class="install-icon">📲</div>
+        <div class="install-text">
+          <div class="install-title">Установить GoalPath</div>
+          <div class="install-sub">Добавить на главный экран как приложение</div>
+        </div>
+        <button class="btn-install" onclick="triggerInstall()">Установить</button>
+        <button class="install-close" onclick="hideBanner()">×</button>
+      </div>`;
+  }
+
+  const total = goals.length;
+  const active = goals.filter(g => !g.done).length;
+  const done = goals.filter(g => g.done).length;
+  const totalSteps = goals.reduce((a, g) => a + (g.steps||[]).length, 0);
+  const doneSteps = goals.reduce((a, g) => a + (g.steps||[]).filter(s=>s.done).length, 0);
+  const overallPct = totalSteps ? Math.round(doneSteps / totalSteps * 100) : 0;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">ВСЕГО ЦЕЛЕЙ</div></div>
+    <div class="stat-card"><div class="stat-num">${active}</div><div class="stat-label">АКТИВНЫХ</div></div>
+    <div class="stat-card"><div class="stat-num">${done}</div><div class="stat-label">ЗАВЕРШЕНО</div></div>
+    <div class="stat-card"><div class="stat-num">${overallPct}%</div><div class="stat-label">ПРОГРЕСС</div></div>
+  `;
+
+  const q = QUOTES[Math.floor(Date.now() / 86400000) % QUOTES.length];
+  document.getElementById('inspirationCard').innerHTML = `
+    <div class="inspiration-text">${q.text}</div>
+    <div class="inspiration-author">— ${q.author}</div>
+  `;
+
+  const mini = document.getElementById('activeGoalsMini');
+  const activeGoals = goals.filter(g => !g.done);
+  if (!activeGoals.length) {
+    mini.innerHTML = '<div class="no-steps" style="padding:20px 16px">Нет активных целей</div>';
+    return;
+  }
+  mini.innerHTML = '';
+  activeGoals.forEach(g => {
+    const pct = calcPct(g);
+    const el = document.createElement('div');
+    el.className = 'mini-goal';
+    el.innerHTML = `
+      <div class="mini-emoji">${g.emoji}</div>
+      <div class="mini-info">
+        <div class="mini-name">${esc(g.name)}</div>
+        <div class="mini-prog">${pct}% · ${(g.steps||[]).length} шагов</div>
+        <div class="mini-bar"><div class="mini-fill" style="width:${pct}%"></div></div>
+      </div>
+    `;
+    el.onclick = () => openGoalDetail(g.id);
+    mini.appendChild(el);
+  });
+}
+
+// ══════════════════════════════════════════
+//  GOAL MODAL
+// ══════════════════════════════════════════
+function openGoalModal(id) {
+  editingGoalId = id || null;
+  selectedEmoji = '🎯';
+
+  const picker = document.getElementById('emojiPicker');
+  picker.innerHTML = '';
+  EMOJIS.forEach(em => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-opt' + (em === selectedEmoji ? ' selected' : '');
+    btn.textContent = em;
+    btn.onclick = () => {
+      selectedEmoji = em;
+      picker.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    picker.appendChild(btn);
+  });
+
+  if (editingGoalId) {
+    const g = goals.find(x => x.id === editingGoalId);
+    document.getElementById('goalModalTitle').textContent = 'Редактировать цель';
+    document.getElementById('goalNameInput').value = g.name;
+    document.getElementById('goalDescInput').value = g.desc || '';
+    document.getElementById('goalDateInput').value = g.deadline || '';
+    selectedEmoji = g.emoji;
+    picker.querySelectorAll('.emoji-opt').forEach(b => {
+      b.classList.toggle('selected', b.textContent === selectedEmoji);
+    });
+  } else {
+    document.getElementById('goalModalTitle').textContent = 'Новая цель';
+    document.getElementById('goalNameInput').value = '';
+    document.getElementById('goalDescInput').value = '';
+    document.getElementById('goalDateInput').value = '';
+  }
+
+  openModal('goalModal');
+}
+
+function saveGoal() {
+  const name = document.getElementById('goalNameInput').value.trim();
+  if (!name) { document.getElementById('goalNameInput').focus(); return; }
+
+  const desc = document.getElementById('goalDescInput').value.trim();
+  const deadline = document.getElementById('goalDateInput').value;
+
+  if (editingGoalId) {
+    const g = goals.find(x => x.id === editingGoalId);
+    g.name = name; g.desc = desc; g.emoji = selectedEmoji; g.deadline = deadline;
+  } else {
+    goals.push({ id: genId(), name, desc, emoji: selectedEmoji, deadline, steps: [], done: false, created: Date.now() });
+  }
+
+  save();
+  closeModal('goalModal');
+  renderGoals();
+  updateHeader();
+}
+
+// ══════════════════════════════════════════
+//  STEP MODAL
+// ══════════════════════════════════════════
+function openStepModal() {
+  selectedPriority = 'mid';
+  document.getElementById('stepNameInput').value = '';
+  document.getElementById('stepNoteInput').value = '';
+  updatePriorityBtns();
+  openModal('stepModal');
+}
+
+function setPriority(p) {
+  selectedPriority = p;
+  updatePriorityBtns();
+}
+
+function updatePriorityBtns() {
+  ['high','mid','low'].forEach(p => {
+    const btn = document.getElementById('prio' + p.charAt(0).toUpperCase() + p.slice(1));
+    btn.className = 'priority-btn' + (selectedPriority === p ? ` sel-${p}` : '');
+  });
+}
+
+function saveStep() {
+  const name = document.getElementById('stepNameInput').value.trim();
+  if (!name) { document.getElementById('stepNameInput').focus(); return; }
+
+  const note = document.getElementById('stepNoteInput').value.trim();
+  const g = goals.find(x => x.id === currentGoalId);
+  if (!g) return;
+
+  if (!g.steps) g.steps = [];
+  g.steps.push({ id: genId(), name, note, priority: selectedPriority, done: false });
+  g.done = false;
+  save();
+  closeModal('stepModal');
+  renderDetail();
+}
+
+// ══════════════════════════════════════════
+//  MODAL HELPERS
+// ══════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeModal(overlay.id);
+  });
+});
+
+// ══════════════════════════════════════════
+//  INSTALL PWA
+// ══════════════════════════════════════════
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  // Show banner on dash if visible
+  if (document.getElementById('screenDash').style.display !== 'none') renderDash();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  localStorage.setItem('gp_install_hidden', '1');
+});
+
+function triggerInstall() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  deferredInstall.userChoice.then(() => { deferredInstall = null; renderDash(); });
+}
+
+function hideBanner() {
+  localStorage.setItem('gp_install_hidden', '1');
+  renderDash();
+}
+
+// ══════════════════════════════════════════
+//  SERVICE WORKER
+// ══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function calcPct(g) {
+  if (!g.steps || !g.steps.length) return 0;
+  return Math.round(g.steps.filter(s => s.done).length / g.steps.length * 100);
+}
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function plural(n, a, b, c) {
+  const m = n % 100;
+  if (m >= 11 && m <= 14) return c;
+  const d = n % 10;
+  if (d === 1) return a;
+  if (d >= 2 && d <= 4) return b;
+  return c;
+}
+function formatDate(str) {
+  if (!str) return '';
+  const [y,m,d] = str.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+showScreen('goals');
+</script>
+</body>
+</html>
